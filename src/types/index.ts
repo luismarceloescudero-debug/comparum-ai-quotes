@@ -93,6 +93,7 @@ export interface ExtractionLog {
   fileName: string;
   durationMs: number;
   status: 'success' | 'error' | 'cached';
+  tokensUsed?: number;
   error?: string;
   errorDetail?: string;
   responsePreview?: string;

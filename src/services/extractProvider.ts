@@ -1,4 +1,4 @@
-import { Provider, LearnedRule, AppConfig, ExtractionLog } from '@/types';
+import { Provider, LearnedRule, AppConfig, ExtractionLog, ExtractQuoteResponse, AIProviderType } from '@/types';
 import { addLog } from '@/services/logs';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -34,7 +34,7 @@ export async function extractQuote(
 
   onProgress?.(85);
 
-  const body = await res.json();
+  const body = (await res.json()) as ExtractQuoteResponse;
 
   if (!res.ok || !body.success || !body.provider) {
     const errorText = body?.error || `Error ${res.status}`;
@@ -42,7 +42,7 @@ export async function extractQuote(
     throw new Error(errorText);
   }
 
-  const chosenProvider = body.provider.aiProvider ?? config.activeProvider;
+  const chosenProvider: AIProviderType = body.provider.aiProvider ?? config.activeProvider;
   addLog(buildLog(file.name, chosenProvider, config.providers[chosenProvider].model, 'success', Date.now() - started));
   onProgress?.(100);
 
