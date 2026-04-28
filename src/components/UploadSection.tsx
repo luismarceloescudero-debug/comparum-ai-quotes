@@ -28,26 +28,23 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef(false);
 
-  // ── helpers ───────────────────────────────────────────────
   const updateQueueItem = (id: string, patch: Partial<QueueItem>) =>
     setQueue(prev => prev.map(q => (q.id === id ? { ...q, ...patch } : q)));
 
   const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-  // ── file validation ───────────────────────────────────────
   const validateFile = (file: File): boolean => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      alert(`Tipo de archivo no soportado: ${file.type}\nUse PDF, PNG, JPG, WEBP, XLSX o DOCX.`);
+      alert(`Tipo no soportado: ${file.type}`);
       return false;
     }
     if (file.size > 20 * 1024 * 1024) {
-      alert('El archivo excede 20 MB.');
+      alert('Máximo permitido: 20 MB.');
       return false;
     }
     return true;
   };
 
-  // ── add files to queue ────────────────────────────────────
   const enqueueFiles = (files: FileList | File[]) => {
     const items: QueueItem[] = Array.from(files)
       .filter(validateFile)
@@ -55,7 +52,6 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
     if (items.length) setQueue(prev => [...prev, ...items]);
   };
 
-  // ── process queue ─────────────────────────────────────────
   const processQueue = useCallback(async () => {
     setIsProcessing(true);
     abortRef.current = false;
@@ -66,13 +62,12 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
     for (const item of pending) {
       if (abortRef.current) break;
 
-      // Check cache
       const hash = await computeFileHash(item.file);
       const cached = getCachedResult(hash);
       if (cached) {
         updateQueueItem(item.id, { status: 'done', progress: 100, result: cached });
         onProviderExtracted(cached);
-        await delay(500);
+        await delay(300);
         continue;
       }
 
@@ -86,10 +81,9 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
         setCachedResult(hash, provider);
         onProviderExtracted(provider);
       } catch (err: any) {
-        updateQueueItem(item.id, { status: 'error', error: err.message ?? 'Unknown error' });
+        updateQueueItem(item.id, { status: 'error', error: err.message ?? 'Error' });
       }
 
-      // Rate-limit delay between files
       if (!abortRef.current) await delay(config.rateLimitDelayMs);
     }
     setIsProcessing(false);
@@ -97,7 +91,6 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
 
   const stopProcessing = () => { abortRef.current = true; };
 
-  // ── drag & drop handlers ──────────────────────────────────
   const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
   const onDragLeave = () => setIsDragging(false);
   const onDrop = (e: React.DragEvent) => {
@@ -106,35 +99,27 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
     enqueueFiles(e.dataTransfer.files);
   };
 
-  // ── render ────────────────────────────────────────────────
   return (
     <section className="space-y-6">
-      {/* Materials textarea */}
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">
-          📋 Materiales / Descripción del riesgo
-        </label>
+        <label className="block text-sm font-medium mb-1">📋 Contexto del pedido</label>
         <textarea
-          className="w-full rounded-lg bg-gray-800 border border-gray-700 p-3 text-sm text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y min-h-[80px]"
+          className="input-field min-h-[84px]"
           rows={3}
-          placeholder="Describa los materiales o riesgos a cotizar…"
+          placeholder="Describe materiales, alcance, condiciones mínimas o aclaraciones..."
           value={materials}
           onChange={e => onMaterialsChange(e.target.value)}
         />
       </div>
 
-      {/* Drop zone */}
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`
-          border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all
-          ${isDragging
-            ? 'border-blue-400 bg-blue-500/10 scale-[1.01]'
-            : 'border-gray-600 hover:border-gray-500 bg-gray-800/50'}
-        `}
+        className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
+          isDragging ? 'border-blue-500 bg-blue-500/10 scale-[1.01]' : 'border-[var(--border)] hover:border-blue-400 bg-[var(--card)]'
+        }`}
       >
         <input
           ref={fileInputRef}
@@ -145,74 +130,39 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
           onChange={e => e.target.files && enqueueFiles(e.target.files)}
         />
         <div className="text-4xl mb-3">📄</div>
-        <p className="text-gray-300 font-medium">
-          Arrastre archivos aquí o haga clic para seleccionar
-        </p>
-        <p className="text-gray-500 text-sm mt-1">
-          PDF, imágenes (PNG/JPG/WEBP), XLSX, DOCX — máx 20 MB
-        </p>
+        <p className="font-medium">Arrastra imágenes/PDFs o haz clic para seleccionar</p>
+        <p className="text-sm text-[var(--muted)] mt-1">Soporta PDFs escaneados, imágenes y documentos de office.</p>
       </div>
 
-      {/* Queue display */}
       {queue.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-400">
-              Cola de extracción ({queue.filter(q => q.status === 'done').length}/{queue.length})
-            </h3>
+            <h3 className="text-sm text-[var(--muted)]">Cola ({queue.filter(q => q.status === 'done').length}/{queue.length})</h3>
             <div className="flex gap-2">
               {!isProcessing ? (
-                <button
-                  onClick={processQueue}
-                  disabled={!queue.some(q => q.status === 'pending')}
-                  className="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-40 rounded-lg font-medium transition-colors"
-                >
-                  ▶ Procesar cola
-                </button>
+                <button onClick={processQueue} disabled={!queue.some(q => q.status === 'pending')} className="btn-primary">Procesar</button>
               ) : (
-                <button
-                  onClick={stopProcessing}
-                  className="px-4 py-1.5 text-sm bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
-                >
-                  ⏹ Detener
-                </button>
+                <button onClick={stopProcessing} className="btn-danger">Detener</button>
               )}
-              <button
-                onClick={() => setQueue([])}
-                className="px-4 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors"
-              >
-                Limpiar
-              </button>
+              <button onClick={() => setQueue([])} className="btn-secondary">Limpiar</button>
             </div>
           </div>
 
           {queue.map(item => (
-            <div key={item.id} className="bg-gray-800 rounded-lg p-3 flex items-center gap-3">
-              <span className="text-lg">
-                {item.status === 'done' ? '✅' : item.status === 'error' ? '❌' : item.status === 'processing' ? '⏳' : '📄'}
-              </span>
+            <div key={item.id} className="card p-3 flex items-center gap-3">
+              <span>{item.status === 'done' ? '✅' : item.status === 'error' ? '❌' : item.status === 'processing' ? '⏳' : '📄'}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-200 truncate">{item.file.name}</p>
+                <p className="text-sm truncate">{item.file.name}</p>
                 {item.status === 'processing' && (
-                  <div className="mt-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                      style={{ width: `${item.progress}%` }}
-                    />
+                  <div className="mt-1 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${item.progress}%` }} />
                   </div>
                 )}
-                {item.status === 'error' && (
-                  <p className="text-xs text-red-400 mt-0.5">{item.error}</p>
-                )}
+                {item.status === 'error' && <p className="text-xs text-red-400">{item.error}</p>}
                 {item.status === 'done' && item.result && (
-                  <p className="text-xs text-green-400 mt-0.5">
-                    {item.result.vendor} — {item.result.currency} {item.result.totalPrice.toLocaleString()}
-                  </p>
+                  <p className="text-xs text-green-500">{item.result.vendor} — {item.result.currency} {item.result.totalPrice.toLocaleString('es-AR')}</p>
                 )}
               </div>
-              <span className="text-xs text-gray-500">
-                {(item.file.size / 1024).toFixed(0)} KB
-              </span>
             </div>
           ))}
         </div>

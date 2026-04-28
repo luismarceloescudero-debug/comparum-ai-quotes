@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Provider, CoverageItem } from '@/types';
 
 interface ProviderCardProps {
@@ -11,25 +10,11 @@ interface ProviderCardProps {
   onRemove: (id: string) => void;
 }
 
-const statusColors: Record<string, string> = {
-  covered: 'bg-green-500/20 text-green-400 border-green-500/30',
-  supplemented: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  missing: 'bg-red-500/20 text-red-400 border-red-500/30',
-  unknown: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-};
-
-const statusLabels: Record<string, string> = {
-  covered: 'Cubierto',
-  supplemented: 'Suplemento',
-  missing: 'No incluido',
-  unknown: 'Sin datos',
-};
-
-const statusIcons: Record<string, string> = {
-  covered: '✅',
-  supplemented: '⚠️',
-  missing: '❌',
-  unknown: '❓',
+const statusMap: Record<string, { label: string; color: string }> = {
+  covered: { label: 'Cubierto', color: 'text-green-500' },
+  supplemented: { label: 'Parcial', color: 'text-yellow-500' },
+  missing: { label: 'Excluido', color: 'text-red-500' },
+  unknown: { label: 'N/D', color: 'text-[var(--muted)]' },
 };
 
 function convertPrice(price: number, fromCurrency: string, toCurrency: string, rate: number): number {
@@ -41,148 +26,58 @@ function convertPrice(price: number, fromCurrency: string, toCurrency: string, r
 
 function CoverageRow({ item }: { item: CoverageItem }) {
   return (
-    <div className="flex items-start gap-2 py-1.5 border-b border-gray-700/50 last:border-0">
-      <span className="text-sm mt-0.5">{statusIcons[item.status]}</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-200 font-medium">{item.name}</p>
-        {item.description && (
-          <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>
-        )}
-        {(item.limit || item.deductible) && (
-          <div className="flex gap-3 mt-1">
-            {item.limit && <span className="text-xs text-gray-400">Límite: {item.limit}</span>}
-            {item.deductible && <span className="text-xs text-gray-400">Deducible: {item.deductible}</span>}
-          </div>
-        )}
+    <div className="py-1.5 border-b border-[var(--border)]/60 last:border-0">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">{item.name}</p>
+        <span className={`text-xs ${statusMap[item.status].color}`}>{statusMap[item.status].label}</span>
       </div>
-      <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[item.status]}`}>
-        {statusLabels[item.status]}
-      </span>
+      {item.description && <p className="text-xs text-[var(--muted)] mt-0.5">{item.description}</p>}
     </div>
   );
 }
 
 export default function ProviderCard({ provider, exchangeRate, isBestPrice, onEdit, onRemove }: ProviderCardProps) {
-  const priceUSD = convertPrice(provider.totalPrice, provider.currency, 'USD', exchangeRate);
-  const priceARS = convertPrice(provider.totalPrice, provider.currency, 'ARS', exchangeRate);
-
-  const coveredCount = provider.coverage.filter(c => c.status === 'covered').length;
-  const totalItems = provider.coverage.length;
-  const coveragePct = totalItems > 0 ? Math.round((coveredCount / totalItems) * 100) : 0;
+  const usd = convertPrice(provider.totalPrice, provider.currency, 'USD', exchangeRate);
+  const coveragePct = provider.coverage.length
+    ? Math.round((provider.coverage.filter((c) => c.status === 'covered').length / provider.coverage.length) * 100)
+    : 0;
 
   return (
-    <div className={`
-      bg-gray-800 rounded-xl border transition-all hover:shadow-lg hover:shadow-blue-500/5
-      ${isBestPrice ? 'border-green-500/50 ring-1 ring-green-500/20' : 'border-gray-700'}
-    `}>
-      {/* Header */}
-      <div className="p-5 border-b border-gray-700">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-gray-100">{provider.vendor}</h3>
-              {isBestPrice && (
-                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full border border-green-500/30">
-                  ⭐ Mejor precio
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Archivo: {provider.sourceFileName} · {new Date(provider.extractedAt).toLocaleDateString('es-AR')}
-            </p>
-          </div>
-          <div className="flex gap-1">
-            <button
-              onClick={() => onEdit(provider)}
-              className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors"
-              title="Editar"
-            >
-              ✏️
-            </button>
-            <button
-              onClick={() => onRemove(provider.id)}
-              className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
-              title="Eliminar"
-            >
-              🗑️
-            </button>
-          </div>
-        </div>
-
-        {/* Price */}
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="bg-gray-900/50 rounded-lg p-3">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Precio Original</p>
-            <p className="text-xl font-bold text-gray-100 mt-1">
-              {provider.currency} {provider.totalPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-          <div className="bg-gray-900/50 rounded-lg p-3">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">
-              {provider.currency === 'USD' ? 'En ARS' : 'En USD'}
-            </p>
-            <p className="text-lg font-semibold text-gray-300 mt-1">
-              {provider.currency === 'USD'
-                ? `ARS ${priceARS.toLocaleString('es-AR', { minimumFractionDigits: 0 })}`
-                : `USD ${priceUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-              }
-            </p>
-            <p className="text-xs text-gray-600 mt-0.5">TC: {exchangeRate.toLocaleString()}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Coverage */}
-      <div className="p-5 border-b border-gray-700">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-400">Coberturas</h4>
+    <article className={`card ${isBestPrice ? 'ring-1 ring-green-500/40 border-green-500/40' : ''}`}>
+      <div className="p-4 border-b border-[var(--border)] flex justify-between gap-3">
+        <div>
           <div className="flex items-center gap-2">
-            <div className="w-20 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-              <div className="h-full bg-green-500 rounded-full" style={{ width: `${coveragePct}%` }} />
-            </div>
-            <span className="text-xs text-gray-500">{coveragePct}%</span>
+            <h4 className="font-semibold">{provider.vendor}</h4>
+            {isBestPrice && <span className="text-xs text-green-500">⭐ mejor precio</span>}
           </div>
+          <p className="text-xs text-[var(--muted)] mt-1">{provider.sourceFileName} · {provider.aiProvider || 'ia'} </p>
         </div>
-        <div className="space-y-0">
-          {provider.coverage.map(item => (
-            <CoverageRow key={item.id} item={item} />
-          ))}
-          {provider.coverage.length === 0 && (
-            <p className="text-sm text-gray-600 text-center py-4">Sin coberturas extraídas</p>
-          )}
+        <div className="flex gap-1">
+          <button className="btn-secondary !px-2 !py-1" onClick={() => onEdit(provider)}>✏️</button>
+          <button className="btn-secondary !px-2 !py-1" onClick={() => onRemove(provider.id)}>🗑️</button>
         </div>
       </div>
 
-      {/* Commercial Conditions */}
-      <div className="p-5">
-        <h4 className="text-sm font-medium text-gray-400 mb-2">Condiciones Comerciales</h4>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          {provider.commercialConditions.paymentTerms && (
-            <div><span className="text-gray-500">Pago:</span> <span className="text-gray-300">{provider.commercialConditions.paymentTerms}</span></div>
-          )}
-          {provider.commercialConditions.validity && (
-            <div><span className="text-gray-500">Vigencia:</span> <span className="text-gray-300">{provider.commercialConditions.validity}</span></div>
-          )}
-          {provider.commercialConditions.installments && (
-            <div><span className="text-gray-500">Cuotas:</span> <span className="text-gray-300">{provider.commercialConditions.installments}</span></div>
-          )}
-          {provider.commercialConditions.discounts && (
-            <div><span className="text-gray-500">Descuentos:</span> <span className="text-gray-300">{provider.commercialConditions.discounts}</span></div>
-          )}
+      <div className="p-4 border-b border-[var(--border)] grid grid-cols-2 gap-3">
+        <div>
+          <p className="text-xs text-[var(--muted)]">Precio original</p>
+          <p className="text-lg font-semibold">{provider.currency} {provider.totalPrice.toLocaleString('es-AR')}</p>
         </div>
-        {provider.qualityScore !== undefined && (
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs text-gray-500">Calidad AI:</span>
-            <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${provider.qualityScore >= 70 ? 'bg-green-500' : provider.qualityScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                style={{ width: `${provider.qualityScore}%` }}
-              />
-            </div>
-            <span className="text-xs text-gray-400">{provider.qualityScore}/100</span>
-          </div>
-        )}
+        <div>
+          <p className="text-xs text-[var(--muted)]">Referencia USD</p>
+          <p className="text-lg font-semibold">USD {usd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</p>
+        </div>
       </div>
-    </div>
+
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-medium">Coberturas</p>
+          <span className="text-xs text-[var(--muted)]">{coveragePct}%</span>
+        </div>
+        <div className="space-y-0.5">
+          {provider.coverage.length ? provider.coverage.map((item) => <CoverageRow key={item.id} item={item} />) : <p className="text-sm text-[var(--muted)]">Sin coberturas detectadas.</p>}
+        </div>
+      </div>
+    </article>
   );
 }

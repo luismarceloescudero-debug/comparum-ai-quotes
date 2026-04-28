@@ -5,16 +5,14 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'AI Quote Extractor — Comparador de Cotizaciones',
-  description: 'Extracción y comparación de cotizaciones de proveedores con inteligencia artificial',
+  title: 'Comparum v2 — extracción y comparación de cotizaciones',
+  description: 'Aplicación escalable de extracción de cotizaciones con multi-proveedor IA, comparación y conversión de divisas en tiempo real.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className="dark">
-      <body className={`${inter.className} bg-gray-950 text-gray-100 min-h-screen antialiased`}>
-        {children}
-      </body>
+      <body className={`${inter.className} min-h-screen antialiased`}>{children}</body>
     </html>
   );
 }

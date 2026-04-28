@@ -1,55 +1,52 @@
 import { AppConfig } from '@/types';
 
-const STORAGE_KEY = 'aqe_config';
+const STORAGE_KEY = 'comparum_config';
 
 export const DEFAULT_CONFIG: AppConfig = {
-  activeProvider: 'gemini',
+  activeProvider: 'abacus',
   providers: {
-    gemini: {
-      provider: 'gemini',
+    abacus: {
+      provider: 'abacus',
       apiKey: '',
-      model: 'gemini-2.0-flash',
-      temperature: 0.2,
-      maxTokens: 8192,
+      model: 'gpt-4.1-mini',
+      temperature: 0.1,
       enabled: true,
     },
     groq: {
       provider: 'groq',
       apiKey: '',
       model: 'llama-3.3-70b-versatile',
-      temperature: 0.2,
-      maxTokens: 8192,
+      temperature: 0.1,
       enabled: true,
     },
-    abacus: {
-      provider: 'abacus',
+    gemini: {
+      provider: 'gemini',
       apiKey: '',
-      model: 'gpt-4o',
-      temperature: 0.2,
-      maxTokens: 8192,
-      enabled: false,
+      model: 'gemini-2.0-flash',
+      temperature: 0.1,
+      enabled: true,
     },
   },
-  exchangeRate: 1200,
-  rateLimitDelayMs: 4000,
-  language: 'es',
+  fallbackOrder: ['abacus', 'groq', 'gemini'],
+  exchangeBaseCurrency: 'USD',
+  rateLimitDelayMs: 2200,
+  theme: 'dark',
 };
 
-/** Get current config from localStorage (with defaults) */
 export function getConfig(): AppConfig {
   if (typeof window === 'undefined') return DEFAULT_CONFIG;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_CONFIG;
-    const saved = JSON.parse(raw);
-    // Merge with defaults to handle new fields
+    const parsed = JSON.parse(raw);
+
     return {
       ...DEFAULT_CONFIG,
-      ...saved,
+      ...parsed,
       providers: {
-        gemini: { ...DEFAULT_CONFIG.providers.gemini, ...saved.providers?.gemini },
-        groq: { ...DEFAULT_CONFIG.providers.groq, ...saved.providers?.groq },
-        abacus: { ...DEFAULT_CONFIG.providers.abacus, ...saved.providers?.abacus },
+        abacus: { ...DEFAULT_CONFIG.providers.abacus, ...parsed.providers?.abacus },
+        groq: { ...DEFAULT_CONFIG.providers.groq, ...parsed.providers?.groq },
+        gemini: { ...DEFAULT_CONFIG.providers.gemini, ...parsed.providers?.gemini },
       },
     };
   } catch {
@@ -57,12 +54,10 @@ export function getConfig(): AppConfig {
   }
 }
 
-/** Save config to localStorage */
 export function saveConfig(config: AppConfig): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 }
 
-/** Reset config to defaults */
 export function resetConfig(): void {
   localStorage.removeItem(STORAGE_KEY);
 }

@@ -1,50 +1,110 @@
-# 🤖 AI Quote Extractor
+# Comparum v2 — Extracción y comparación inteligente de cotizaciones
 
-AI-powered provider quote extraction and comparison tool. Upload quotes from multiple providers (PDF, images, XLSX, DOCX), extract structured data using AI, and compare side-by-side.
+Aplicación full-stack en **Next.js (App Router + TypeScript)** para:
+- Extraer cotizaciones desde **imágenes y PDFs (incluyendo escaneados)**
+- Comparar múltiples proveedores con normalización de datos
+- Convertir monedas en tiempo real con APIs confiables y fallback
+- Aprender de correcciones del usuario para mejorar futuras extracciones
 
-## Features
+## Arquitectura
 
-- 📄 **Multi-format upload**: PDF, PNG, JPG, WEBP, XLSX, DOCX (drag & drop)
-- 🤖 **Multi-AI providers**: Google Gemini (free, vision), Groq (free, fast), Abacus AI (paid, premium)
-- 📊 **Smart comparison**: Sort by price, coverage, quality, date
-- 💱 **Currency conversion**: ARS/USD with configurable exchange rate
-- 🧠 **Learning system**: Corrections become rules for future extractions
-- 📋 **Extraction logs**: Track all extractions with export to JSON/CSV
-- 💾 **Smart caching**: Skip re-extraction of identical files
-- ⏱ **Rate limiting**: Configurable delay between bulk uploads
-
-## Quick Start
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Open http://localhost:3000
+```txt
+src/
+  app/
+    api/
+      ai/extract-quote/route.ts      -> endpoint de extracción
+      currency/rates/route.ts        -> tasas con fallback+cache
+      learnings/route.ts             -> reglas aprendidas (JSON FS)
+      quotes/route.ts                -> histórico y comparación
+  server/
+    providers/                       -> Abacus, Groq, Gemini
+    services/                        -> orquestación, prompt, moneda, storage, normalización
+    controllers/                     -> capa HTTP/controller
+  components/                        -> UI reutilizable (upload/cards/comparativa/modales)
+  services/                          -> servicios client-side
+  types/
 ```
 
-## Configuration
+## Funcionalidades principales
 
-1. Click ⚙️ in the header
-2. Enter your API key for your preferred provider:
-   - **Gemini**: Get key at https://aistudio.google.com/apikey
-   - **Groq**: Get key at https://console.groq.com/keys
-   - **Abacus**: Get token from your Abacus AI deployment
-3. Set exchange rate and processing delay
+- ✅ **Proveedor principal IA**: Abacus AI
+- ✅ **Fallback automático**: Groq → Gemini (con ajuste para PDF escaneado)
+- ✅ **Extracción robusta PDF/imagen**:
+  - PDF con texto: se usa texto + contexto
+  - PDF escaneado: se envía PDF base64 a provider de visión (Gemini cuando aplica fallback)
+- ✅ **Conversión de divisas en tiempo real**:
+  - API principal: `open.er-api.com` (ExchangeRate API)
+  - Fallback: `frankfurter.app`
+  - Cache local JSON con refresco automático
+- ✅ **Comparador multicotización**: tabla por coberturas + mejor precio
+- ✅ **Sistema de aprendizaje**: correcciones del usuario guardadas como reglas
+- ✅ **Persistencia local tipo JSON FS** (compatible con Vercel runtime de forma efímera)
+- ✅ **Tema oscuro/claro**
 
-## Architecture
+## Instalación paso a paso
 
-See `references/architecture.md` for detailed system design.
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-## Tech Stack
+Abrir en navegador:
+- `http://localhost:3000`
 
-- Next.js 14 (App Router) + TypeScript
-- Tailwind CSS (dark theme)
-- localStorage for client-side persistence
-- No database required (future: Supabase/Firebase)
+## Variables de entorno
 
-## License
+Ver `.env.example`.
+
+- `ABACUS_API_KEY` (**recomendada/primaria**)
+- `GROQ_API_KEY` (opcional)
+- `GEMINI_API_KEY` (opcional)
+- `DATA_DIR` (opcional, para persistencia local)
+
+> También puedes cargar API keys desde el modal de configuración de la UI.
+
+## Uso rápido
+
+1. Entra a **⚙️ IA** y configura modelos/API keys
+2. Sube imágenes o PDFs
+3. Revisa cotizaciones extraídas
+4. Ajusta moneda de visualización y compara
+5. Edita coberturas para entrenar reglas aprendidas
+
+## Deployment en Vercel
+
+1. Importa repo en Vercel
+2. Configura variables de entorno (`ABACUS_API_KEY`, etc.)
+3. Deploy
+
+Se incluye `vercel.json` con:
+- funciones optimizadas para extracción
+- timeout/memoria adecuados para archivos y llamadas a IA
+
+## Capturas de pantalla (flujo recomendado)
+
+- Pantalla principal con drag&drop de PDFs
+- Cards de proveedores extraídos
+- Tabla comparativa con mejor precio resaltado
+- Modal de configuración IA (Abacus/Groq/Gemini)
+- Panel de logs y sistema de aprendizaje
+
+> Puedes tomar estas capturas desde el entorno en ejecución para documentación comercial.
+
+## Notas técnicas
+
+- En Vercel, el sistema JSON en filesystem es **efímero** (no reemplaza una DB).
+- Para producción multiusuario persistente se recomienda migrar a Postgres/Supabase.
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+```
+
+## Licencia
 
 MIT

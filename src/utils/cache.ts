@@ -47,7 +47,7 @@ export function setCachedResult(fileHash: string, provider: Provider): void {
     fileHash,
     provider,
     extractedAt: new Date().toISOString(),
-    aiProvider: 'gemini', // will be overwritten
+    aiProvider: provider.aiProvider || 'abacus',
   });
   saveCache(filtered);
 }

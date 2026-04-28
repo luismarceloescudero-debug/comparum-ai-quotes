@@ -3,5 +3,10 @@ node_modules/
 out/
 .env
 .env.local
+.env.*.local
 *.tsbuildinfo
 next-env.d.ts
+
+# runtime local storage
+/data/*.json
+/tmp/
