@@ -57,6 +57,7 @@ Abrir en navegador:
 Ver `.env.example`.
 
 - `ABACUS_API_KEY` (**recomendada/primaria**)
+- `ABACUS_DEPLOYMENT_ID` (opcional pero recomendado para `getChatResponse` con deployment)
 - `GROQ_API_KEY` (opcional)
 - `GEMINI_API_KEY` (opcional)
 - `DATA_DIR` (opcional, para persistencia local)

@@ -13,6 +13,7 @@ export interface ProviderRunInput {
   model: string;
   temperature: number;
   apiKey: string;
+  deploymentId?: string;
   document: DocumentPart;
 }
 

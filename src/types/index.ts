@@ -58,6 +58,7 @@ export interface AIProviderConfig {
   model: string;
   temperature: number;
   enabled: boolean;
+  deploymentId?: string;
 }
 
 export interface AppConfig {

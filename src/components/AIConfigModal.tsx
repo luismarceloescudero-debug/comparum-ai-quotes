@@ -23,7 +23,7 @@ interface Props {
 }
 
 const MODEL_OPTIONS: Record<AIProviderType, string[]> = {
-  abacus: ['gpt-4.1-mini', 'gpt-4o', 'claude-3-5-sonnet'],
+  abacus: ['gpt-4.1-mini', 'gpt-4o', 'claude-3-5-sonnet', 'route-llm'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
   gemini: ['gemini-2.0-flash', 'gemini-1.5-pro'],
 };
@@ -72,6 +72,16 @@ export default function AIConfigModal({ isOpen, onClose, onConfigChange }: Props
                   placeholder={`API key de ${provider}`}
                 />
               </div>
+              {provider === 'abacus' && (
+                <div className="grid md:grid-cols-[120px_1fr] gap-3 items-center mb-2">
+                  <span className="ai-config-label">Deployment ID</span>
+                  <Input
+                    value={config.providers.abacus.deploymentId || ''}
+                    onChange={(e) => updateProvider('abacus', { deploymentId: e.target.value })}
+                    placeholder="Opcional: deploymentId de Abacus"
+                  />
+                </div>
+              )}
               <div className="grid md:grid-cols-2 gap-3">
                 <Select
                   value={config.providers[provider].model}

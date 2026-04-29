@@ -11,6 +11,7 @@ export const DEFAULT_CONFIG: AppConfig = {
       model: 'gpt-4.1-mini',
       temperature: 0.1,
       enabled: true,
+      deploymentId: '',
     },
     groq: {
       provider: 'groq',

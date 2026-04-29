@@ -29,6 +29,7 @@ export async function extractWithFallback(options: ExtractionOptions): Promise<{
     try {
       const result = await providers[providerName].run({
         apiKey: cfg.apiKey,
+        deploymentId: cfg.deploymentId,
         model: cfg.model,
         temperature: cfg.temperature,
         systemPrompt: SYSTEM_PROMPT,
@@ -45,7 +46,10 @@ export async function extractWithFallback(options: ExtractionOptions): Promise<{
       const message = String(error?.message || 'Error desconocido');
       logs.push({ provider: providerName, status: 'error', error: message });
 
-      if (!isRetryable(message)) break;
+      if (!isRetryable(message)) {
+        // Aun en errores no "retriables" intentamos el siguiente proveedor para evitar bloquear toda la extracción.
+        continue;
+      }
     }
   }
 
