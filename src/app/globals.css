@@ -180,39 +180,6 @@ body {
 }
 .upload-title { font-size: 1.05rem; font-weight: 800; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .upload-subtitle { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 16px; }
-.materials-context-box {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0 auto 16px;
-  max-width: 920px;
-  text-align: left;
-}
-.materials-context-label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-}
-.materials-context-input {
-  width: 100%;
-  min-height: 82px;
-  resize: vertical;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  padding: 10px 12px;
-  font-size: 0.9rem;
-}
-.materials-context-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.18);
-}
-.materials-upload-btn {
-  align-self: flex-start;
-}
 .upload-area {
   background: var(--surface); border: 2px dashed var(--border);
   border-radius: var(--radius); padding: 36px 20px; cursor: pointer; transition: all 0.3s;

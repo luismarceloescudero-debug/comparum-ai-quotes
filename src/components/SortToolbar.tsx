@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowDownWideNarrow, Printer, RotateCcw, Trash2 } from 'lucide-react';
+import { useRef } from 'react';
+import { ArrowDownWideNarrow, Printer, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { SortCriteria } from '@/types';
 
 interface SortToolbarProps {
@@ -9,6 +10,7 @@ interface SortToolbarProps {
   onResetAll: () => void;
   onPrintAll: () => void;
   onClearProviders: () => void;
+  onLoadMaterials: (file: File) => void;
 }
 
 const SORTS: { key: SortCriteria; label: string }[] = [
@@ -19,7 +21,9 @@ const SORTS: { key: SortCriteria; label: string }[] = [
   { key: 'date', label: 'Fecha' },
 ];
 
-export default function SortToolbar({ sortKey, onSortChange, onResetAll, onPrintAll, onClearProviders }: SortToolbarProps) {
+export default function SortToolbar({ sortKey, onSortChange, onResetAll, onPrintAll, onClearProviders, onLoadMaterials }: SortToolbarProps) {
+  const materialsInputRef = useRef<HTMLInputElement>(null);
+
   return (
     <section className="sort-toolbar no-print">
       <span className="sort-label">
@@ -41,6 +45,20 @@ export default function SortToolbar({ sortKey, onSortChange, onResetAll, onPrint
       </div>
 
       <div className="toolbar-right">
+        <button className="tool-btn" type="button" onClick={() => materialsInputRef.current?.click()}>
+          <Upload size={13} /> Cargar listado de materiales
+        </button>
+        <input
+          ref={materialsInputRef}
+          type="file"
+          className="file-input"
+          accept=".txt,.csv,.xlsx,.xls,.md,.json"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onLoadMaterials(file);
+            e.currentTarget.value = '';
+          }}
+        />
         <button className="tool-btn" onClick={onPrintAll} type="button">
           <Printer size={13} /> Imprimir
         </button>

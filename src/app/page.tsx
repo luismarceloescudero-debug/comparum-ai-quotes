@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import UploadSection from '@/components/UploadSection';
 import SortToolbar from '@/components/SortToolbar';
 import ProviderCard from '@/components/ProviderCard';
@@ -83,6 +83,57 @@ export default function HomePage() {
     saveConfig(next);
   };
 
+  const parseMaterialsFile = useCallback(async (file: File): Promise<string> => {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    if (!ext) throw new Error('No se pudo detectar el tipo de archivo');
+
+    if (['txt', 'csv', 'md', 'json'].includes(ext)) {
+      return await file.text();
+    }
+
+    if (ext === 'xlsx' || ext === 'xls') {
+      const XLSX = await import('xlsx');
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const lines: string[] = [];
+
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const csv = XLSX.utils.sheet_to_csv(sheet, { FS: ';' });
+        if (csv.trim()) {
+          lines.push(`# Hoja: ${sheetName}`);
+          lines.push(csv.trim());
+        }
+      }
+
+      return lines.join('\n');
+    }
+
+    throw new Error('Formato no soportado para materiales. Usá TXT, CSV o XLSX.');
+  }, []);
+
+  const handleLoadMaterials = useCallback(
+    async (file: File) => {
+      try {
+        if (file.size > 20 * 1024 * 1024) {
+          throw new Error('El archivo supera el máximo permitido (20MB)');
+        }
+
+        const parsedText = await parseMaterialsFile(file);
+        const normalized = parsedText.trim();
+        if (!normalized) {
+          throw new Error('El archivo no contiene materiales legibles');
+        }
+
+        setMaterials((prev) => (prev.trim() ? `${prev.trim()}\n\n${normalized}` : normalized));
+      } catch (err) {
+        window.alert(err instanceof Error ? err.message : 'No se pudo cargar el listado de materiales.');
+      }
+    },
+    [parseMaterialsFile],
+  );
+
   const handleResetAll = () => {
     if (!window.confirm('¿Resetear tarjetas y contexto del pedido?')) return;
     setProviders([]);
@@ -114,7 +165,7 @@ export default function HomePage() {
       </div>
 
       <main className="main-container">
-        <UploadSection materials={materials} onMaterialsChange={setMaterials} onProviderExtracted={(provider) => setProviders((prev) => [provider, ...prev])} />
+        <UploadSection materials={materials} onProviderExtracted={(provider) => setProviders((prev) => [provider, ...prev])} />
 
         <SortToolbar
           sortKey={sortKey}
@@ -122,6 +173,7 @@ export default function HomePage() {
           onPrintAll={() => window.print()}
           onClearProviders={() => setProviders([])}
           onResetAll={handleResetAll}
+          onLoadMaterials={handleLoadMaterials}
         />
 
         {sortedProviders.length > 0 ? (
@@ -144,11 +196,11 @@ export default function HomePage() {
             </div>
           </section>
         )}
-
-        <footer className="print-footer-bar" style={{ display: 'block' }}>
-          COMPARUM — Generado: {today} | Tipo de cambio: 1 USD = {new Intl.NumberFormat('es-AR').format(exchangeRate)} ARS
-        </footer>
       </main>
+
+      <footer className="print-footer-bar">
+        COMPARUM — Generado: {today} | Tipo de cambio: 1 USD = {new Intl.NumberFormat('es-AR').format(exchangeRate)} ARS
+      </footer>
 
       {editing && (
         <ProviderEditModal
