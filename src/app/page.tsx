@@ -30,8 +30,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('dark', config.theme === 'dark');
+    document.documentElement.setAttribute('data-theme', config.theme);
   }, [config.theme]);
 
   const refreshRates = async (base = config.exchangeBaseCurrency) => {
@@ -88,46 +87,52 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg)]/90 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-2">
-          <div>
-            <h1 className="text-xl font-bold">Comparum v2</h1>
-            <p className="text-xs text-[var(--muted)]">Extracción + comparación inteligente de cotizaciones</p>
+    <div>
+      <header className="comp-header">
+        <div className="header-left">
+          <div className="logo">
+            <div className="logo-icon">C</div>
+            <div>
+              <div className="logo-text">Comparum</div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>MVP Theme · v2 Funcional</div>
+            </div>
           </div>
+          <span className="client-badge">Extracción + comparación IA</span>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <ThemeToggle theme={config.theme} onChange={handleThemeChange} />
-            <button className="btn-secondary" onClick={() => setShowLogs(true)}>📊 Logs</button>
-            <button className="btn-secondary" onClick={() => setShowConfig(true)}>⚙️ IA</button>
+        <div className="header-right">
+          <div className="exchange-box">
+            <label>Moneda</label>
+            <select className="input-field !py-1 !px-2 !text-xs" value={viewCurrency} onChange={(e) => setViewCurrency(e.target.value)}>
+              {Object.keys(rates).slice(0, 10).map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+            </select>
           </div>
+          <ThemeToggle theme={config.theme} onChange={handleThemeChange} />
+          <button className="tool-btn" onClick={() => setShowLogs(true)}>📊 Logs</button>
+          <button className="tool-btn" onClick={() => setShowConfig(true)}>⚙️ IA</button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      <main className="main-container">
         <UploadSection
           materials={materials}
           onMaterialsChange={setMaterials}
           onProviderExtracted={(provider) => setProviders((prev) => [provider, ...prev])}
         />
 
-        <section className="card p-4 md:p-5">
+        <section className="card p-4" style={{ marginBottom: '24px' }}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-sm text-[var(--muted)]">Moneda de visualización:</label>
-              <select className="input-field max-w-[120px]" value={viewCurrency} onChange={(e) => setViewCurrency(e.target.value)}>
-                {Object.keys(rates).slice(0, 10).map((currency) => <option key={currency} value={currency}>{currency}</option>)}
-              </select>
-              <button className="btn-secondary" onClick={() => refreshRates()}>Actualizar tasas</button>
+              <button className="tool-btn" onClick={() => refreshRates()}>Actualizar tasas</button>
             </div>
-            <span className="text-xs text-[var(--muted)]">{ratesInfo}</span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{ratesInfo}</span>
           </div>
         </section>
 
         <ComparisonTable providers={sortedProviders} comparison={comparison} currency={viewCurrency} />
 
         {sortedProviders.length > 0 ? (
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <section className="providers-grid">
             {sortedProviders.map((provider) => (
               <ProviderCard
                 key={provider.id}
@@ -140,16 +145,16 @@ export default function HomePage() {
             ))}
           </section>
         ) : (
-          <section className="card p-10 text-center text-[var(--muted)]">
+          <section className="card p-10 text-center" style={{ color: 'var(--text-muted)' }}>
             Sube cotizaciones para iniciar comparación de proveedores.
           </section>
         )}
 
         <section className="card p-4">
           <h3 className="font-semibold mb-2">Sistema de aprendizaje</h3>
-          <p className="text-sm text-[var(--muted)] mb-3">Reglas aprendidas: {getLearnings().length}</p>
+          <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>Reglas aprendidas: {getLearnings().length}</p>
           <div className="flex gap-2 flex-wrap">
-            <button className="btn-secondary" onClick={() => {
+            <button className="tool-btn" onClick={() => {
               const blob = new Blob([exportLearningsJSON()], { type: 'application/json' });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
@@ -158,7 +163,7 @@ export default function HomePage() {
               a.click();
               URL.revokeObjectURL(url);
             }}>Exportar reglas</button>
-            <button className="btn-secondary" onClick={() => {
+            <button className="tool-btn" onClick={() => {
               const input = document.createElement('input');
               input.type = 'file';
               input.accept = '.json';

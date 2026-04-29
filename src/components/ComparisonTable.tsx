@@ -19,22 +19,22 @@ export default function ComparisonTable({ providers, comparison, currency }: Pro
   if (!providers.length || !comparison) return null;
 
   return (
-    <section className="card p-4 md:p-6">
+    <section className="card p-4 md:p-6" style={{ marginBottom: 24 }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">Tabla comparativa</h3>
-        <span className="text-xs text-[var(--muted)]">Moneda normalizada: {currency}</span>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Moneda normalizada: {currency}</span>
       </div>
 
       <div className="overflow-auto">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="quote-table" style={{ minWidth: 760 }}>
           <thead>
-            <tr className="text-left border-b border-[var(--border)]">
-              <th className="py-2 pr-2">Cobertura</th>
+            <tr>
+              <th>Cobertura</th>
               {providers.map((p) => (
-                <th key={p.id} className="py-2 px-2">
+                <th key={p.id}>
                   <div className="flex flex-col">
                     <span>{p.vendor}</span>
-                    <span className={`text-xs ${comparison.bestPriceProviderId === p.id ? 'text-green-500 font-semibold' : 'text-[var(--muted)]'}`}>
+                    <span className="text-xs" style={{ color: comparison.bestPriceProviderId === p.id ? 'var(--success)' : 'var(--text-muted)' }}>
                       {comparison.normalizedPrices[p.id]?.toLocaleString('es-AR', { maximumFractionDigits: 2 })} {comparison.normalizedCurrency}
                     </span>
                   </div>
@@ -44,10 +44,13 @@ export default function ComparisonTable({ providers, comparison, currency }: Pro
           </thead>
           <tbody>
             {comparison.rows.map((row) => (
-              <tr key={row.coverageName} className="border-b border-[var(--border)]/60">
-                <td className="py-2 pr-2 font-medium">{row.coverageName}</td>
+              <tr key={row.coverageName}>
+                <td className="font-medium">{row.coverageName}</td>
                 {row.providers.map((cell) => (
-                  <td key={`${row.coverageName}-${cell.providerId}`} className={`py-2 px-2 ${row.bestProviderId === cell.providerId ? 'bg-green-500/10' : ''}`}>
+                  <td
+                    key={`${row.coverageName}-${cell.providerId}`}
+                    style={{ background: row.bestProviderId === cell.providerId ? 'var(--success-light)' : 'transparent' }}
+                  >
                     {statusLabel[cell.status]}
                   </td>
                 ))}

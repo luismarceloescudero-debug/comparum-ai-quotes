@@ -65,100 +65,78 @@ export default function AILogModal({ isOpen, onClose }: AILogModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-gray-800 rounded-2xl border border-gray-700 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="p-5 border-b border-gray-700 flex items-center justify-between">
+    <div className="modal-overlay">
+      <div className="modal-box" style={{ maxWidth: 980 }}>
+        <div className="modal-header">
           <div>
-            <h2 className="text-lg font-bold text-gray-100">📊 Logs de Extracción</h2>
-            <p className="text-sm text-gray-500">{logs.length} extracciones registradas</p>
+            <h3>📊 Logs de Extracción</h3>
+            <p className="sub">{logs.length} extracciones registradas</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-700 text-gray-400">✕</button>
+          <button onClick={onClose} className="modal-close">✕</button>
         </div>
 
-        {/* Stats bar */}
-        <div className="px-5 py-3 border-b border-gray-700 flex flex-wrap gap-4 text-sm">
-          <span className="text-green-400">✅ {successCount} exitosas</span>
-          <span className="text-red-400">❌ {errorCount} errores</span>
-          <span className="text-blue-400">💾 {cachedCount} cache</span>
-          <span className="text-gray-400">⏱ Promedio: {avgDuration}ms</span>
-        </div>
-
-        {/* Toolbar */}
-        <div className="px-5 py-3 border-b border-gray-700 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex gap-1">
-            {(['all', 'success', 'error', 'cached'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  filter === f ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                }`}
-              >
-                {f === 'all' ? 'Todos' : f === 'success' ? 'Exitosos' : f === 'error' ? 'Errores' : 'Cache'}
-              </button>
-            ))}
+        <div className="modal-body">
+          <div className="sort-toolbar" style={{ marginBottom: 12 }}>
+            <span style={{ color: 'var(--success)' }}>✅ {successCount} exitosas</span>
+            <span style={{ color: 'var(--danger)' }}>❌ {errorCount} errores</span>
+            <span style={{ color: 'var(--info)' }}>💾 {cachedCount} cache</span>
+            <span style={{ color: 'var(--text-muted)' }}>⏱ Promedio: {avgDuration}ms</span>
           </div>
-          <div className="flex gap-2">
-            <button onClick={handleExportJSON} className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs text-gray-300 transition-colors">
-              📥 JSON
-            </button>
-            <button onClick={handleExportCSV} className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs text-gray-300 transition-colors">
-              📥 CSV
-            </button>
-            <button onClick={handleImport} className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs text-gray-300 transition-colors">
-              📤 Importar
-            </button>
-            <button onClick={handleClear} className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-xs text-red-400 transition-colors">
-              🗑️ Limpiar
-            </button>
-          </div>
-        </div>
 
-        {/* Log list */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-2">
-          {filtered.length === 0 ? (
-            <p className="text-center text-gray-600 py-10">Sin logs registrados</p>
-          ) : (
-            filtered.map(log => (
-              <div key={log.id} className="bg-gray-900 rounded-lg p-3 space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">
-                      {log.status === 'success' ? '✅' : log.status === 'error' ? '❌' : '💾'}
-                    </span>
-                    <span className="text-sm text-gray-200 font-medium">{log.fileName}</span>
-                    <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded">{log.provider}</span>
-                    <span className="text-xs text-gray-600">{log.model}</span>
+          <div className="sort-toolbar" style={{ marginBottom: 12 }}>
+            <div className="sort-group">
+              {(['all', 'success', 'error', 'cached'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`sort-btn ${filter === f ? 'active' : ''}`}
+                >
+                  {f === 'all' ? 'Todos' : f === 'success' ? 'Exitosos' : f === 'error' ? 'Errores' : 'Cache'}
+                </button>
+              ))}
+            </div>
+            <div className="toolbar-right">
+              <button onClick={handleExportJSON} className="tool-btn">📥 JSON</button>
+              <button onClick={handleExportCSV} className="tool-btn">📥 CSV</button>
+              <button onClick={handleImport} className="tool-btn">📤 Importar</button>
+              <button onClick={handleClear} className="tool-btn" style={{ color: 'var(--danger)' }}>🗑️ Limpiar</button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {filtered.length === 0 ? (
+              <p className="text-center py-10" style={{ color: 'var(--text-muted)' }}>Sin logs registrados</p>
+            ) : (
+              filtered.map(log => (
+                <div key={log.id} className="card p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{log.status === 'success' ? '✅' : log.status === 'error' ? '❌' : '💾'}</span>
+                      <span className="text-sm font-medium">{log.fileName}</span>
+                      <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'var(--bg)', color: 'var(--text-muted)' }}>{log.provider}</span>
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{log.model}</span>
+                    </div>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{log.durationMs}ms</span>
                   </div>
-                  <span className="text-xs text-gray-500">{log.durationMs}ms</span>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-gray-500">
-                  <span>{new Date(log.timestamp).toLocaleString('es-AR')}</span>
-                  {log.tokensUsed && <span>{log.tokensUsed} tokens</span>}
-                </div>
-                {log.error && (
-                  <div className="mt-1 bg-red-500/10 border border-red-500/20 rounded p-2">
-                    <p className="text-xs text-red-400">{log.error}</p>
-                    {log.errorDetail && (
-                      <details className="mt-1">
-                        <summary className="text-xs text-red-500 cursor-pointer">Detalle</summary>
-                        <pre className="text-xs text-red-300 mt-1 overflow-x-auto">{log.errorDetail}</pre>
-                      </details>
-                    )}
+                  <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <span>{new Date(log.timestamp).toLocaleString('es-AR')}</span>
+                    {log.tokensUsed && <span>{log.tokensUsed} tokens</span>}
                   </div>
-                )}
-                {log.responsePreview && log.status === 'success' && (
-                  <details className="mt-1">
-                    <summary className="text-xs text-gray-500 cursor-pointer">Vista previa</summary>
-                    <pre className="text-xs text-gray-400 mt-1 bg-gray-800 rounded p-2 overflow-x-auto max-h-32">
-                      {log.responsePreview}
-                    </pre>
-                  </details>
-                )}
-              </div>
-            ))
-          )}
+                  {log.error && (
+                    <div className="missing-items" style={{ background: 'var(--danger-light)', borderLeftColor: 'var(--danger)' }}>
+                      <p className="text-xs" style={{ color: 'var(--danger)' }}>{log.error}</p>
+                      {log.errorDetail && (
+                        <details className="mt-1">
+                          <summary className="text-xs cursor-pointer" style={{ color: 'var(--danger)' }}>Detalle</summary>
+                          <pre className="text-xs mt-1 overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>{log.errorDetail}</pre>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -11,10 +11,10 @@ interface ProviderCardProps {
 }
 
 const statusMap: Record<string, { label: string; color: string }> = {
-  covered: { label: 'Cubierto', color: 'text-green-500' },
-  supplemented: { label: 'Parcial', color: 'text-yellow-500' },
-  missing: { label: 'Excluido', color: 'text-red-500' },
-  unknown: { label: 'N/D', color: 'text-[var(--muted)]' },
+  covered: { label: 'Cubierto', color: 'var(--success)' },
+  supplemented: { label: 'Parcial', color: 'var(--warning)' },
+  missing: { label: 'Excluido', color: 'var(--danger)' },
+  unknown: { label: 'N/D', color: 'var(--text-muted)' },
 };
 
 function convertPrice(price: number, fromCurrency: string, toCurrency: string, rate: number): number {
@@ -29,9 +29,9 @@ function CoverageRow({ item }: { item: CoverageItem }) {
     <div className="py-1.5 border-b border-[var(--border)]/60 last:border-0">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">{item.name}</p>
-        <span className={`text-xs ${statusMap[item.status].color}`}>{statusMap[item.status].label}</span>
+        <span className="text-xs" style={{ color: statusMap[item.status].color }}>{statusMap[item.status].label}</span>
       </div>
-      {item.description && <p className="text-xs text-[var(--muted)] mt-0.5">{item.description}</p>}
+      {item.description && <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.description}</p>}
     </div>
   );
 }
@@ -43,39 +43,48 @@ export default function ProviderCard({ provider, exchangeRate, isBestPrice, onEd
     : 0;
 
   return (
-    <article className={`card ${isBestPrice ? 'ring-1 ring-green-500/40 border-green-500/40' : ''}`}>
-      <div className="p-4 border-b border-[var(--border)] flex justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h4 className="font-semibold">{provider.vendor}</h4>
-            {isBestPrice && <span className="text-xs text-green-500">⭐ mejor precio</span>}
+    <article className={`provider-card ${coveragePct > 75 ? 'complete-card' : ''}`}>
+      <div className={`quality-strip ${coveragePct > 85 ? 'premium' : coveragePct > 60 ? 'standard-plus' : 'standard'}`} />
+      <div className="card-body">
+        <div className="card-top-row">
+          <div className={`rank-badge ${isBestPrice ? 'gold' : 'other'}`}>
+            {isBestPrice ? '1' : '•'}
           </div>
-          <p className="text-xs text-[var(--muted)] mt-1">{provider.sourceFileName} · {provider.aiProvider || 'ia'} </p>
+          <div className="card-title-area">
+            <div className={`status-ribbon ${coveragePct > 85 ? 'complete' : coveragePct > 60 ? 'near-complete' : 'partial'}`}>
+              {coveragePct}% cobertura
+            </div>
+            <h4 className="provider-name">{provider.vendor}</h4>
+            <p className="provider-location">📄 {provider.sourceFileName} · {provider.aiProvider || 'ia'}</p>
+          </div>
+          <div className="flex gap-1">
+            <button className="tool-btn" onClick={() => onEdit(provider)}>✏️</button>
+            <button className="tool-btn" onClick={() => onRemove(provider.id)}>🗑️</button>
+          </div>
         </div>
-        <div className="flex gap-1">
-          <button className="btn-secondary !px-2 !py-1" onClick={() => onEdit(provider)}>✏️</button>
-          <button className="btn-secondary !px-2 !py-1" onClick={() => onRemove(provider.id)}>🗑️</button>
-        </div>
-      </div>
 
-      <div className="p-4 border-b border-[var(--border)] grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-xs text-[var(--muted)]">Precio original</p>
-          <p className="text-lg font-semibold">{provider.currency} {provider.totalPrice.toLocaleString('es-AR')}</p>
+        <div className="price-dual">
+          <div className={`price-side ${provider.currency === 'ARS' ? 'ars' : 'usd'} primary`}>
+            <div className="price-side-label">Precio original ({provider.currency})</div>
+            <div className="price-side-value">{provider.totalPrice.toLocaleString('es-AR')}</div>
+          </div>
+          <div className="price-divider" />
+          <div className="price-side usd">
+            <div className="price-side-label">Referencia USD</div>
+            <div className="price-side-value">{usd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</div>
+          </div>
         </div>
-        <div>
-          <p className="text-xs text-[var(--muted)]">Referencia USD</p>
-          <p className="text-lg font-semibold">USD {usd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</p>
-        </div>
-      </div>
 
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-medium">Coberturas</p>
-          <span className="text-xs text-[var(--muted)]">{coveragePct}%</span>
-        </div>
-        <div className="space-y-0.5">
-          {provider.coverage.length ? provider.coverage.map((item) => <CoverageRow key={item.id} item={item} />) : <p className="text-sm text-[var(--muted)]">Sin coberturas detectadas.</p>}
+        <div className="card-footer">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium">Coberturas</p>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{coveragePct}%</span>
+          </div>
+          <div className="space-y-0.5">
+            {provider.coverage.length
+              ? provider.coverage.map((item) => <CoverageRow key={item.id} item={item} />)
+              : <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Sin coberturas detectadas.</p>}
+          </div>
         </div>
       </div>
     </article>

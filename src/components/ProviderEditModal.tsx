@@ -59,14 +59,14 @@ export default function ProviderEditModal({ provider, isOpen, onClose, onSave }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="card w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-          <h3 className="font-semibold">Editar cotización de {editData.vendor}</h3>
-          <button onClick={onClose} className="btn-secondary !px-2 !py-1">✕</button>
+    <div className="modal-overlay">
+      <div className="modal-box">
+        <div className="modal-header">
+          <h3>Editar cotización de {editData.vendor}</h3>
+          <button onClick={onClose} className="modal-close">✕</button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="modal-body space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <input className="input-field" value={editData.vendor} onChange={(e) => setEditData({ ...editData, vendor: e.target.value })} />
             <div className="flex gap-2">
@@ -80,9 +80,9 @@ export default function ProviderEditModal({ provider, isOpen, onClose, onSave }:
           </div>
 
           <div className="space-y-2">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <p className="text-sm font-medium">Coberturas</p>
-              <button className="btn-secondary !py-1 !px-2" onClick={addCoverageItem}>+ agregar</button>
+              <button className="tool-btn" onClick={addCoverageItem}>+ agregar</button>
             </div>
             {editData.coverage.map((item, idx) => (
               <div key={item.id} className="card p-3 space-y-2">
@@ -91,7 +91,7 @@ export default function ProviderEditModal({ provider, isOpen, onClose, onSave }:
                   <select className="input-field" value={item.status} onChange={(e) => updateCoverageItem(idx, { status: e.target.value as CoverageStatus })}>
                     {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
-                  <button className="btn-secondary !px-2" onClick={() => removeCoverageItem(idx)}>🗑️</button>
+                  <button className="tool-btn" onClick={() => removeCoverageItem(idx)}>🗑️</button>
                 </div>
                 <input className="input-field" placeholder="Descripción" value={item.description || ''} onChange={(e) => updateCoverageItem(idx, { description: e.target.value })} />
               </div>
@@ -101,10 +101,10 @@ export default function ProviderEditModal({ provider, isOpen, onClose, onSave }:
           <textarea className="input-field min-h-[80px]" placeholder="Notas" value={editData.notes || ''} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} />
         </div>
 
-        <div className="p-4 border-t border-[var(--border)] flex justify-end gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancelar</button>
+        <div className="modal-footer">
+          <button className="btn-ghost btn" onClick={onClose}>Cancelar</button>
           <button
-            className="btn-primary"
+            className="btn-accent btn"
             onClick={() => {
               onSave(editData);
               onClose();

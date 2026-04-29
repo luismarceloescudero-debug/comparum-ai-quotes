@@ -36,14 +36,14 @@ export default function AIConfigModal({ isOpen, onClose, onConfigChange }: Props
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="card w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-          <h3 className="font-semibold">Configuración de proveedores IA</h3>
-          <button className="btn-secondary !px-2 !py-1" onClick={onClose}>✕</button>
+    <div className="modal-overlay">
+      <div className="modal-box">
+        <div className="modal-header">
+          <h3>Configuración de proveedores IA</h3>
+          <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="modal-body space-y-4">
           {(['abacus', 'groq', 'gemini'] as AIProviderType[]).map((provider) => (
             <div key={provider} className="card p-3 space-y-2">
               <div className="flex items-center justify-between">
@@ -75,7 +75,7 @@ export default function AIConfigModal({ isOpen, onClose, onConfigChange }: Props
 
           <div className="card p-3 space-y-2">
             <p className="font-medium">Orden de fallback</p>
-            <p className="text-xs text-[var(--muted)]">Formato: abacus,groq,gemini</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Formato: abacus,groq,gemini</p>
             <input
               className="input-field"
               value={config.fallbackOrder.join(',')}
@@ -95,10 +95,10 @@ export default function AIConfigModal({ isOpen, onClose, onConfigChange }: Props
           </div>
         </div>
 
-        <div className="p-4 border-t border-[var(--border)] flex justify-end gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancelar</button>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
           <button
-            className="btn-primary"
+            className="btn btn-accent"
             onClick={() => {
               saveConfig(config);
               onConfigChange(config);

@@ -100,9 +100,9 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
   };
 
   return (
-    <section className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium mb-1">📋 Contexto del pedido</label>
+    <section className="upload-section">
+      <div style={{ marginBottom: 16, textAlign: 'left' }}>
+        <label className="sort-label" style={{ marginBottom: 6 }}>📋 Contexto del pedido</label>
         <textarea
           className="input-field min-h-[84px]"
           rows={3}
@@ -117,51 +117,55 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
-          isDragging ? 'border-blue-500 bg-blue-500/10 scale-[1.01]' : 'border-[var(--border)] hover:border-blue-400 bg-[var(--card)]'
-        }`}
+        className={`upload-area ${isDragging ? 'dragover' : ''}`}
       >
         <input
           ref={fileInputRef}
           type="file"
           multiple
           accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.docx"
-          className="hidden"
+          className="file-input"
           onChange={e => e.target.files && enqueueFiles(e.target.files)}
         />
-        <div className="text-4xl mb-3">📄</div>
-        <p className="font-medium">Arrastra imágenes/PDFs o haz clic para seleccionar</p>
-        <p className="text-sm text-[var(--muted)] mt-1">Soporta PDFs escaneados, imágenes y documentos de office.</p>
+        <div className="upload-icon">📄</div>
+        <p className="upload-text">Arrastra imágenes/PDFs o haz clic para seleccionar</p>
+        <p className="upload-hint">Soporta PDFs escaneados, imágenes y documentos de office.</p>
       </div>
 
       {queue.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm text-[var(--muted)]">Cola ({queue.filter(q => q.status === 'done').length}/{queue.length})</h3>
-            <div className="flex gap-2">
+        <div style={{ marginTop: 16 }}>
+          <div className="sort-toolbar" style={{ marginBottom: 10 }}>
+            <h3 className="sort-label">Cola ({queue.filter(q => q.status === 'done').length}/{queue.length})</h3>
+            <div className="toolbar-right">
               {!isProcessing ? (
-                <button onClick={processQueue} disabled={!queue.some(q => q.status === 'pending')} className="btn-primary">Procesar</button>
+                <button onClick={processQueue} disabled={!queue.some(q => q.status === 'pending')} className="btn btn-accent">Procesar</button>
               ) : (
                 <button onClick={stopProcessing} className="btn-danger">Detener</button>
               )}
-              <button onClick={() => setQueue([])} className="btn-secondary">Limpiar</button>
+              <button onClick={() => setQueue([])} className="tool-btn">Limpiar</button>
             </div>
           </div>
 
           {queue.map(item => (
-            <div key={item.id} className="card p-3 flex items-center gap-3">
-              <span>{item.status === 'done' ? '✅' : item.status === 'error' ? '❌' : item.status === 'processing' ? '⏳' : '📄'}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm truncate">{item.file.name}</p>
-                {item.status === 'processing' && (
-                  <div className="mt-1 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${item.progress}%` }} />
-                  </div>
-                )}
-                {item.status === 'error' && <p className="text-xs text-red-400">{item.error}</p>}
-                {item.status === 'done' && item.result && (
-                  <p className="text-xs text-green-500">{item.result.vendor} — {item.result.currency} {item.result.totalPrice.toLocaleString('es-AR')}</p>
-                )}
+            <div key={item.id} className="uploaded-file">
+              <div className="file-info">
+                <span className="file-icon-box">{item.status === 'done' ? '✅' : item.status === 'error' ? '❌' : item.status === 'processing' ? '⏳' : '📄'}</span>
+                <div>
+                  <p className="file-name">{item.file.name}</p>
+                  <p className={`file-status ${item.status === 'done' ? 'processed' : ''} ${item.status === 'error' ? 'error-status' : ''}`}>
+                    {item.status === 'processing' ? <span className="processing-spinner" /> : null}
+                    {item.status === 'done' && item.result
+                      ? `${item.result.vendor} — ${item.result.currency} ${item.result.totalPrice.toLocaleString('es-AR')}`
+                      : item.status === 'error'
+                        ? item.error
+                        : item.status}
+                  </p>
+                  {item.status === 'processing' && (
+                    <div className="progress-bar-bg" style={{ marginTop: 6 }}>
+                      <div className="progress-bar-fill" style={{ width: `${item.progress}%`, background: 'var(--accent)' }} />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
