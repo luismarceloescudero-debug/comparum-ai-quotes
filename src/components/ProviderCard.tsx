@@ -1,6 +1,6 @@
 'use client';
 
-import { Provider, CoverageItem } from '@/types';
+import { Provider } from '@/types';
 
 interface ProviderCardProps {
   provider: Provider;
@@ -10,13 +10,6 @@ interface ProviderCardProps {
   onRemove: (id: string) => void;
 }
 
-const statusMap: Record<string, { label: string; color: string }> = {
-  covered: { label: 'Cubierto', color: 'text-green-500' },
-  supplemented: { label: 'Parcial', color: 'text-yellow-500' },
-  missing: { label: 'Excluido', color: 'text-red-500' },
-  unknown: { label: 'N/D', color: 'text-[var(--muted)]' },
-};
-
 function convertPrice(price: number, fromCurrency: string, toCurrency: string, rate: number): number {
   if (fromCurrency === toCurrency) return price;
   if (fromCurrency === 'USD' && toCurrency === 'ARS') return price * rate;
@@ -24,58 +17,112 @@ function convertPrice(price: number, fromCurrency: string, toCurrency: string, r
   return price;
 }
 
-function CoverageRow({ item }: { item: CoverageItem }) {
-  return (
-    <div className="py-1.5 border-b border-[var(--border)]/60 last:border-0">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">{item.name}</p>
-        <span className={`text-xs ${statusMap[item.status].color}`}>{statusMap[item.status].label}</span>
-      </div>
-      {item.description && <p className="text-xs text-[var(--muted)] mt-0.5">{item.description}</p>}
-    </div>
-  );
-}
+const statusLabel = {
+  covered: 'Cubierto',
+  supplemented: 'Suplementado',
+  missing: 'Faltante',
+  unknown: 'N/D',
+} as const;
+
+const statusClass = {
+  covered: 'text-[var(--success)]',
+  supplemented: 'text-[var(--warning)]',
+  missing: 'text-[var(--danger)]',
+  unknown: 'text-[var(--text-muted)]',
+} as const;
 
 export default function ProviderCard({ provider, exchangeRate, isBestPrice, onEdit, onRemove }: ProviderCardProps) {
-  const usd = convertPrice(provider.totalPrice, provider.currency, 'USD', exchangeRate);
-  const coveragePct = provider.coverage.length
-    ? Math.round((provider.coverage.filter((c) => c.status === 'covered').length / provider.coverage.length) * 100)
-    : 0;
+  const arsVal = convertPrice(provider.totalPrice, provider.currency, 'ARS', exchangeRate);
+  const usdVal = convertPrice(provider.totalPrice, provider.currency, 'USD', exchangeRate);
+  const covered = provider.coverage.filter((c) => c.status === 'covered' || c.status === 'supplemented').length;
+  const pct = provider.coverage.length ? Math.round((covered / provider.coverage.length) * 100) : 0;
+  const quality = provider.qualityScore ?? 0;
 
   return (
-    <article className={`card ${isBestPrice ? 'ring-1 ring-green-500/40 border-green-500/40' : ''}`}>
-      <div className="p-4 border-b border-[var(--border)] flex justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h4 className="font-semibold">{provider.vendor}</h4>
-            {isBestPrice && <span className="text-xs text-green-500">⭐ mejor precio</span>}
+    <article className={`provider-card ${pct === 100 ? 'complete-card' : ''} ${isBestPrice ? 'ring-2 ring-[var(--success)]/40' : ''}`}>
+      <div className={`quality-strip ${quality >= 85 ? 'premium' : quality >= 70 ? 'standard-plus' : 'standard'}`} />
+      <div className="card-body">
+        <div className="card-top-row">
+          <div className={`rank-badge ${isBestPrice ? 'gold' : 'other'}`}>{isBestPrice ? '1' : '•'}</div>
+          <div className="card-title-area">
+            <div className={`status-ribbon ${pct >= 90 ? 'complete' : pct >= 70 ? 'near-complete' : pct >= 40 ? 'partial' : 'low'}`}>
+              {covered}/{provider.coverage.length || 0} ítems
+            </div>
+            <h3 className="provider-name">{provider.vendor}</h3>
+            <div className="provider-location">{provider.sourceFileName} · {provider.aiProvider ?? 'ia'}</div>
           </div>
-          <p className="text-xs text-[var(--muted)] mt-1">{provider.sourceFileName} · {provider.aiProvider || 'ia'} </p>
         </div>
-        <div className="flex gap-1">
-          <button className="btn-secondary !px-2 !py-1" onClick={() => onEdit(provider)}>✏️</button>
-          <button className="btn-secondary !px-2 !py-1" onClick={() => onRemove(provider.id)}>🗑️</button>
-        </div>
-      </div>
 
-      <div className="p-4 border-b border-[var(--border)] grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-xs text-[var(--muted)]">Precio original</p>
-          <p className="text-lg font-semibold">{provider.currency} {provider.totalPrice.toLocaleString('es-AR')}</p>
+        <div className="price-dual">
+          <div className={`price-side ars ${provider.currency === 'ARS' ? 'primary' : ''}`}>
+            <span className="price-side-label">ARS</span>
+            <span className="price-side-value">{arsVal.toLocaleString('es-AR', { maximumFractionDigits: 2 })}</span>
+          </div>
+          <div className="price-divider" />
+          <div className={`price-side usd ${provider.currency === 'USD' ? 'primary' : ''}`}>
+            <span className="price-side-label">USD</span>
+            <span className="price-side-value">{usdVal.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+          </div>
         </div>
-        <div>
-          <p className="text-xs text-[var(--muted)]">Referencia USD</p>
-          <p className="text-lg font-semibold">USD {usd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</p>
-        </div>
-      </div>
 
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-medium">Coberturas</p>
-          <span className="text-xs text-[var(--muted)]">{coveragePct}%</span>
+        <div className="card-stats-3">
+          <div className="stat-box">
+            <div className="stat-box-label">Cobertura</div>
+            <div className="stat-box-value green">{pct}%</div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-box-label">Score</div>
+            <div className="stat-box-value blue">{quality || 'N/D'}</div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-box-label">Moneda origen</div>
+            <div className="stat-box-value">{provider.currency}</div>
+          </div>
         </div>
-        <div className="space-y-0.5">
-          {provider.coverage.length ? provider.coverage.map((item) => <CoverageRow key={item.id} item={item} />) : <p className="text-sm text-[var(--muted)]">Sin coberturas detectadas.</p>}
+
+        <div className="notes-block">
+          <button className="notes-toggle" type="button">
+            Análisis y coberturas ({provider.coverage.length})
+          </button>
+          <ul className="notes-list open">
+            {provider.coverage.map((item) => (
+              <li key={item.id} className="note-item note-meta">
+                <span className="note-text">
+                  <strong>{item.name}:</strong>{' '}
+                  <span className={statusClass[item.status]}>{statusLabel[item.status]}</span>
+                  {item.description ? ` · ${item.description}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {provider.commercialConditions && Object.values(provider.commercialConditions).some(Boolean) && (
+          <div className="commercial-block">
+            <div className="commercial-block-title">Condiciones comerciales</div>
+            <dl className="commercial-list">
+              {provider.commercialConditions.paymentTerms && (
+                <div className="commercial-row"><dt>Pago</dt><dd>{provider.commercialConditions.paymentTerms}</dd></div>
+              )}
+              {provider.commercialConditions.validity && (
+                <div className="commercial-row"><dt>Validez</dt><dd>{provider.commercialConditions.validity}</dd></div>
+              )}
+              {provider.commercialConditions.discounts && (
+                <div className="commercial-row"><dt>Descuentos</dt><dd>{provider.commercialConditions.discounts}</dd></div>
+              )}
+              {provider.commercialConditions.surcharges && (
+                <div className="commercial-row"><dt>Recargos</dt><dd>{provider.commercialConditions.surcharges}</dd></div>
+              )}
+            </dl>
+          </div>
+        )}
+
+        <div className="card-footer">
+          <div className="card-actions-3">
+            <button className="action-btn btn-detail" onClick={() => onEdit(provider)}>Editar</button>
+            <button className="action-btn btn-detail" onClick={() => onRemove(provider.id)}>Quitar</button>
+            <button className="action-btn btn-detail" onClick={() => window.print()}>Imprimir</button>
+          </div>
         </div>
       </div>
     </article>

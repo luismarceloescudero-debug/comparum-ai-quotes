@@ -29,9 +29,9 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
   const abortRef = useRef(false);
 
   const updateQueueItem = (id: string, patch: Partial<QueueItem>) =>
-    setQueue(prev => prev.map(q => (q.id === id ? { ...q, ...patch } : q)));
+    setQueue((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
 
-  const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   const validateFile = (file: File): boolean => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -48,8 +48,8 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
   const enqueueFiles = (files: FileList | File[]) => {
     const items: QueueItem[] = Array.from(files)
       .filter(validateFile)
-      .map(file => ({ id: uuidv4(), file, status: 'pending' as const, progress: 0 }));
-    if (items.length) setQueue(prev => [...prev, ...items]);
+      .map((file) => ({ id: uuidv4(), file, status: 'pending' as const, progress: 0 }));
+    if (items.length) setQueue((prev) => [...prev, ...items]);
   };
 
   const processQueue = useCallback(async () => {
@@ -58,7 +58,7 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
     const config = getConfig();
     const learnings: LearnedRule[] = getLearnings();
 
-    const pending = queue.filter(q => q.status === 'pending');
+    const pending = queue.filter((q) => q.status === 'pending');
     for (const item of pending) {
       if (abortRef.current) break;
 
@@ -67,7 +67,7 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
       if (cached) {
         updateQueueItem(item.id, { status: 'done', progress: 100, result: cached });
         onProviderExtracted(cached);
-        await delay(300);
+        await delay(250);
         continue;
       }
 
@@ -89,79 +89,76 @@ export default function UploadSection({ materials, onMaterialsChange, onProvider
     setIsProcessing(false);
   }, [queue, materials, onProviderExtracted]);
 
-  const stopProcessing = () => { abortRef.current = true; };
-
-  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
-  const onDragLeave = () => setIsDragging(false);
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    enqueueFiles(e.dataTransfer.files);
-  };
-
   return (
-    <section className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium mb-1">📋 Contexto del pedido</label>
+    <section className="upload-section no-print">
+      <div className="upload-title"><span>✨</span> Importación de archivos con IA</div>
+      <div className="upload-subtitle">Subí cotizaciones (PDF/imagen/Office). Se procesa con multi-provider IA + fallback.</div>
+
+      <div className="mb-4 text-left">
+        <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Contexto del pedido</label>
         <textarea
-          className="input-field min-h-[84px]"
+          className="input-field min-h-[84px] mt-2"
           rows={3}
-          placeholder="Describe materiales, alcance, condiciones mínimas o aclaraciones..."
+          placeholder="Describe materiales, alcance y condiciones comerciales..."
           value={materials}
-          onChange={e => onMaterialsChange(e.target.value)}
+          onChange={(e) => onMaterialsChange(e.target.value)}
         />
       </div>
 
       <div
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
+        className={`upload-area ${isDragging ? 'dragover' : ''}`}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
-          isDragging ? 'border-blue-500 bg-blue-500/10 scale-[1.01]' : 'border-[var(--border)] hover:border-blue-400 bg-[var(--card)]'
-        }`}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          enqueueFiles(e.dataTransfer.files);
+        }}
       >
         <input
           ref={fileInputRef}
           type="file"
           multiple
           accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.docx"
-          className="hidden"
-          onChange={e => e.target.files && enqueueFiles(e.target.files)}
+          className="file-input"
+          onChange={(e) => e.target.files && enqueueFiles(e.target.files)}
         />
-        <div className="text-4xl mb-3">📄</div>
-        <p className="font-medium">Arrastra imágenes/PDFs o haz clic para seleccionar</p>
-        <p className="text-sm text-[var(--muted)] mt-1">Soporta PDFs escaneados, imágenes y documentos de office.</p>
+        <div className="upload-icon">📄</div>
+        <div className="upload-text">Arrastrá archivos aquí o hacé clic para seleccionar</div>
+        <div className="upload-hint">Máximo 20MB por archivo</div>
       </div>
 
       {queue.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm text-[var(--muted)]">Cola ({queue.filter(q => q.status === 'done').length}/{queue.length})</h3>
-            <div className="flex gap-2">
-              {!isProcessing ? (
-                <button onClick={processQueue} disabled={!queue.some(q => q.status === 'pending')} className="btn-primary">Procesar</button>
-              ) : (
-                <button onClick={stopProcessing} className="btn-danger">Detener</button>
-              )}
-              <button onClick={() => setQueue([])} className="btn-secondary">Limpiar</button>
-            </div>
+        <div className="ai-result active">
+          <div className="ai-header">
+            <div className="ai-icon">🤖</div>
+            <div className="ai-title">Cola de procesamiento ({queue.filter((q) => q.status === 'done').length}/{queue.length})</div>
           </div>
 
-          {queue.map(item => (
-            <div key={item.id} className="card p-3 flex items-center gap-3">
-              <span>{item.status === 'done' ? '✅' : item.status === 'error' ? '❌' : item.status === 'processing' ? '⏳' : '📄'}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm truncate">{item.file.name}</p>
-                {item.status === 'processing' && (
-                  <div className="mt-1 h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${item.progress}%` }} />
+          <div className="flex gap-2 mb-3">
+            {!isProcessing ? (
+              <button onClick={processQueue} disabled={!queue.some((q) => q.status === 'pending')} className="btn btn-accent">Procesar</button>
+            ) : (
+              <button onClick={() => { abortRef.current = true; }} className="btn btn-ghost">Detener</button>
+            )}
+            <button onClick={() => setQueue([])} className="btn btn-ghost">Limpiar</button>
+          </div>
+
+          {queue.map((item) => (
+            <div key={item.id} className="uploaded-file">
+              <div className="file-info">
+                <div className="file-icon-box">📎</div>
+                <div>
+                  <div className="file-name">{item.file.name}</div>
+                  <div className={`file-status ${item.status === 'done' ? 'processed' : item.status === 'error' ? 'error-status' : ''}`}>
+                    {item.status === 'processing' ? (
+                      <><span className="processing-spinner" />Procesando... {item.progress}%</>
+                    ) : item.status === 'done' && item.result ? (
+                      `${item.result.vendor} · ${item.result.currency} ${item.result.totalPrice.toLocaleString('es-AR')}`
+                    ) : item.status === 'error' ? item.error : 'Pendiente'}
                   </div>
-                )}
-                {item.status === 'error' && <p className="text-xs text-red-400">{item.error}</p>}
-                {item.status === 'done' && item.result && (
-                  <p className="text-xs text-green-500">{item.result.vendor} — {item.result.currency} {item.result.totalPrice.toLocaleString('es-AR')}</p>
-                )}
+                </div>
               </div>
             </div>
           ))}

@@ -3,6 +3,18 @@
 import React, { useEffect, useState } from 'react';
 import { AppConfig, AIProviderType } from '@/types';
 import { DEFAULT_CONFIG, getConfig, saveConfig } from '@/utils/config';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Props {
   isOpen: boolean;
@@ -23,8 +35,6 @@ export default function AIConfigModal({ isOpen, onClose, onConfigChange }: Props
     if (isOpen) setConfig(getConfig());
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const updateProvider = (provider: AIProviderType, patch: Partial<AppConfig['providers'][AIProviderType]>) => {
     setConfig((prev) => ({
       ...prev,
@@ -36,69 +46,91 @@ export default function AIConfigModal({ isOpen, onClose, onConfigChange }: Props
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="card w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-          <h3 className="font-semibold">Configuración de proveedores IA</h3>
-          <button className="btn-secondary !px-2 !py-1" onClick={onClose}>✕</button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-[var(--border)] bg-[var(--surface)] text-[var(--text)]">
+        <DialogHeader>
+          <DialogTitle>Configuración de IA</DialogTitle>
+          <DialogDescription>
+            Mantenemos backend multi-provider actual (Abacus + Groq + Gemini) con UI estilo Replit.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="p-4 space-y-4">
+        <div className="space-y-3">
           {(['abacus', 'groq', 'gemini'] as AIProviderType[]).map((provider) => (
-            <div key={provider} className="card p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="font-medium uppercase">{provider}</p>
-                <label className="text-sm flex items-center gap-2">
-                  <input type="checkbox" checked={config.providers[provider].enabled} onChange={(e) => updateProvider(provider, { enabled: e.target.checked })} />
-                  habilitado
-                </label>
+            <div key={provider} className="ai-config-section">
+              <h4 className="ai-config-h">{provider.toUpperCase()}</h4>
+              <div className="grid md:grid-cols-[120px_1fr] gap-3 items-center mb-2">
+                <span className="ai-config-label">Habilitado</span>
+                <Switch checked={config.providers[provider].enabled} onCheckedChange={(checked) => updateProvider(provider, { enabled: checked })} />
               </div>
-
-              <input
-                className="input-field"
-                type="password"
-                placeholder={`API Key ${provider}`}
-                value={config.providers[provider].apiKey}
-                onChange={(e) => updateProvider(provider, { apiKey: e.target.value })}
-              />
-
-              <div className="grid grid-cols-2 gap-2">
-                <select className="input-field" value={config.providers[provider].model} onChange={(e) => updateProvider(provider, { model: e.target.value })}>
-                  {MODEL_OPTIONS[provider].map((model) => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
-                </select>
-                <input className="input-field" type="number" min={0} max={1} step={0.1} value={config.providers[provider].temperature} onChange={(e) => updateProvider(provider, { temperature: Number(e.target.value) || 0.1 })} />
+              <div className="grid md:grid-cols-[120px_1fr] gap-3 items-center mb-2">
+                <span className="ai-config-label">API Key</span>
+                <Input
+                  type="password"
+                  value={config.providers[provider].apiKey}
+                  onChange={(e) => updateProvider(provider, { apiKey: e.target.value })}
+                  placeholder={`API key de ${provider}`}
+                />
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <Select
+                  value={config.providers[provider].model}
+                  onValueChange={(value) => updateProvider(provider, { model: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Modelo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODEL_OPTIONS[provider].map((model) => (
+                      <SelectItem key={model} value={model}>{model}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={config.providers[provider].temperature}
+                  onChange={(e) => updateProvider(provider, { temperature: Number(e.target.value) || 0 })}
+                  placeholder="Temperature"
+                />
               </div>
             </div>
           ))}
 
-          <div className="card p-3 space-y-2">
-            <p className="font-medium">Orden de fallback</p>
-            <p className="text-xs text-[var(--muted)]">Formato: abacus,groq,gemini</p>
-            <input
-              className="input-field"
-              value={config.fallbackOrder.join(',')}
-              onChange={(e) => {
-                const parsed = e.target.value
-                  .split(',')
-                  .map((v) => v.trim())
-                  .filter((v): v is AIProviderType => ['abacus', 'groq', 'gemini'].includes(v));
-                if (parsed.length) setConfig((prev) => ({ ...prev, fallbackOrder: parsed }));
-              }}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <input className="input-field" type="number" value={config.rateLimitDelayMs} onChange={(e) => setConfig((prev) => ({ ...prev, rateLimitDelayMs: Number(e.target.value) || 0 }))} />
-            <input className="input-field" value={config.exchangeBaseCurrency} onChange={(e) => setConfig((prev) => ({ ...prev, exchangeBaseCurrency: e.target.value.toUpperCase() }))} />
+          <div className="ai-config-section">
+            <h4 className="ai-config-h">Parámetros globales</h4>
+            <div className="grid md:grid-cols-2 gap-3">
+              <Input
+                value={config.fallbackOrder.join(',')}
+                onChange={(e) => {
+                  const parsed = e.target.value
+                    .split(',')
+                    .map((v) => v.trim())
+                    .filter((v): v is AIProviderType => ['abacus', 'groq', 'gemini'].includes(v));
+                  if (parsed.length) setConfig((prev) => ({ ...prev, fallbackOrder: parsed }));
+                }}
+                placeholder="abacus,groq,gemini"
+              />
+              <Input
+                type="number"
+                value={config.rateLimitDelayMs}
+                onChange={(e) => setConfig((prev) => ({ ...prev, rateLimitDelayMs: Number(e.target.value) || 0 }))}
+                placeholder="Delay entre requests"
+              />
+              <Input
+                value={config.exchangeBaseCurrency}
+                onChange={(e) => setConfig((prev) => ({ ...prev, exchangeBaseCurrency: e.target.value.toUpperCase() }))}
+                placeholder="Moneda base"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="p-4 border-t border-[var(--border)] flex justify-end gap-2">
-          <button className="btn-secondary" onClick={onClose}>Cancelar</button>
-          <button
-            className="btn-primary"
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
             onClick={() => {
               saveConfig(config);
               onConfigChange(config);
@@ -106,9 +138,9 @@ export default function AIConfigModal({ isOpen, onClose, onConfigChange }: Props
             }}
           >
             Guardar
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -7,7 +7,7 @@ import ProviderEditModal from '@/components/ProviderEditModal';
 import AIConfigModal from '@/components/AIConfigModal';
 import AILogModal from '@/components/AILogModal';
 import ComparisonTable from '@/components/ComparisonTable';
-import ThemeToggle from '@/components/ThemeToggle';
+import Header from '@/components/Header';
 import { AppConfig, Provider, QuoteComparisonSummary } from '@/types';
 import { getConfig, saveConfig } from '@/utils/config';
 import { clearLearnings, exportLearningsJSON, getLearnings, importLearnings, syncLearningsFromServer } from '@/services/learnings';
@@ -30,8 +30,8 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('dark', config.theme === 'dark');
+    document.documentElement.classList.toggle('dark', config.theme === 'dark');
+    document.documentElement.setAttribute('data-theme', config.theme);
   }, [config.theme]);
 
   const refreshRates = async (base = config.exchangeBaseCurrency) => {
@@ -49,7 +49,7 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.exchangeBaseCurrency]);
 
-  const exchangeRate = rates['ARS'] || 1200;
+  const exchangeRate = rates.ARS || 1200;
 
   useEffect(() => {
     if (!providers.length) {
@@ -57,7 +57,7 @@ export default function HomePage() {
       return;
     }
 
-    const payload = {
+    setComparison({
       bestPriceProviderId: providers
         .map((p) => ({ id: p.id, amount: convert(p.totalPrice, p.currency, viewCurrency, rates, config.exchangeBaseCurrency) }))
         .sort((a, b) => a.amount - b.amount)[0]?.id,
@@ -66,9 +66,7 @@ export default function HomePage() {
         providers.map((p) => [p.id, convert(p.totalPrice, p.currency, viewCurrency, rates, config.exchangeBaseCurrency)]),
       ),
       rows: buildRows(providers),
-    } as QuoteComparisonSummary;
-
-    setComparison(payload);
+    });
   }, [providers, rates, viewCurrency, config.exchangeBaseCurrency]);
 
   const bestPriceId = comparison?.bestPriceProviderId;
@@ -81,53 +79,46 @@ export default function HomePage() {
     });
   }, [providers, rates, viewCurrency, config.exchangeBaseCurrency]);
 
-  const handleThemeChange = (theme: 'dark' | 'light') => {
-    const next = { ...config, theme };
+  const handleThemeToggle = () => {
+    const next: AppConfig = { ...config, theme: config.theme === 'dark' ? 'light' : 'dark' };
     setConfig(next);
     saveConfig(next);
   };
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg)]/90 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-2">
-          <div>
-            <h1 className="text-xl font-bold">COMPARUM - Marcelo Escudero</h1>
-            <p className="text-xs text-[var(--muted)]">Extracción + comparación inteligente de cotizaciones</p>
-          </div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
+      <Header
+        exchangeRate={exchangeRate}
+        onExchangeRateChange={(rate) => setRates((prev) => ({ ...prev, ARS: rate }))}
+        theme={config.theme}
+        onToggleTheme={handleThemeToggle}
+        onOpenAIConfig={() => setShowConfig(true)}
+        onOpenAILog={() => setShowLogs(true)}
+      />
 
-          <div className="flex items-center gap-2">
-            <ThemeToggle theme={config.theme} onChange={handleThemeChange} />
-            <button className="btn-secondary" onClick={() => setShowLogs(true)}>📊 Logs</button>
-            <button className="btn-secondary" onClick={() => setShowConfig(true)}>⚙️ IA</button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      <main className="main-container">
         <UploadSection
           materials={materials}
           onMaterialsChange={setMaterials}
           onProviderExtracted={(provider) => setProviders((prev) => [provider, ...prev])}
         />
 
-        <section className="card p-4 md:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-[var(--muted)]">Moneda de visualización:</label>
-              <select className="input-field max-w-[120px]" value={viewCurrency} onChange={(e) => setViewCurrency(e.target.value)}>
-                {Object.keys(rates).slice(0, 10).map((currency) => <option key={currency} value={currency}>{currency}</option>)}
-              </select>
-              <button className="btn-secondary" onClick={() => refreshRates()}>Actualizar tasas</button>
-            </div>
-            <span className="text-xs text-[var(--muted)]">{ratesInfo}</span>
+        <section className="sort-toolbar no-print">
+          <div className="sort-group">
+            <button className="sort-btn" onClick={() => refreshRates()}>Actualizar tasas</button>
+            <select className="sort-btn" value={viewCurrency} onChange={(e) => setViewCurrency(e.target.value)}>
+              {Object.keys(rates).slice(0, 20).map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+            </select>
+          </div>
+          <div className="toolbar-right">
+            <span className="text-xs text-[var(--text-muted)]">{ratesInfo}</span>
           </div>
         </section>
 
         <ComparisonTable providers={sortedProviders} comparison={comparison} currency={viewCurrency} />
 
         {sortedProviders.length > 0 ? (
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <section className="providers-grid">
             {sortedProviders.map((provider) => (
               <ProviderCard
                 key={provider.id}
@@ -140,16 +131,18 @@ export default function HomePage() {
             ))}
           </section>
         ) : (
-          <section className="card p-10 text-center text-[var(--muted)]">
-            Sube cotizaciones para iniciar comparación de proveedores.
+          <section className="modal-box" style={{ maxWidth: '100%' }}>
+            <div className="modal-body" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+              Sube cotizaciones para iniciar comparación de proveedores.
+            </div>
           </section>
         )}
 
-        <section className="card p-4">
-          <h3 className="font-semibold mb-2">Sistema de aprendizaje</h3>
-          <p className="text-sm text-[var(--muted)] mb-3">Reglas aprendidas: {getLearnings().length}</p>
-          <div className="flex gap-2 flex-wrap">
-            <button className="btn-secondary" onClick={() => {
+        <section className="ai-config-section no-print">
+          <h4 className="ai-config-h">Sistema de aprendizaje</h4>
+          <p className="ai-config-help">Reglas aprendidas: {getLearnings().length}</p>
+          <div className="ai-config-actions">
+            <button className="btn btn-ghost" onClick={() => {
               const blob = new Blob([exportLearningsJSON()], { type: 'application/json' });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
@@ -158,7 +151,7 @@ export default function HomePage() {
               a.click();
               URL.revokeObjectURL(url);
             }}>Exportar reglas</button>
-            <button className="btn-secondary" onClick={() => {
+            <button className="btn btn-ghost" onClick={() => {
               const input = document.createElement('input');
               input.type = 'file';
               input.accept = '.json';
@@ -170,9 +163,13 @@ export default function HomePage() {
               };
               input.click();
             }}>Importar reglas</button>
-            <button className="btn-danger" onClick={() => clearLearnings()}>Limpiar reglas</button>
+            <button className="btn btn-ghost" onClick={() => clearLearnings()}>Limpiar reglas</button>
           </div>
         </section>
+
+        <footer className="print-footer-bar" style={{ display: 'block' }}>
+          COMPARUM - Marcelo Escudero · Multi-provider IA (Abacus + Groq + Gemini)
+        </footer>
       </main>
 
       {editing && (
@@ -184,12 +181,7 @@ export default function HomePage() {
         />
       )}
 
-      <AIConfigModal
-        isOpen={showConfig}
-        onClose={() => setShowConfig(false)}
-        onConfigChange={setConfig}
-      />
-
+      <AIConfigModal isOpen={showConfig} onClose={() => setShowConfig(false)} onConfigChange={setConfig} />
       <AILogModal isOpen={showLogs} onClose={() => setShowLogs(false)} />
     </div>
   );
