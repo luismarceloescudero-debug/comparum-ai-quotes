@@ -2,15 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import UploadSection from '@/components/UploadSection';
+import SortToolbar from '@/components/SortToolbar';
 import ProviderCard from '@/components/ProviderCard';
 import ProviderEditModal from '@/components/ProviderEditModal';
 import AIConfigModal from '@/components/AIConfigModal';
 import AILogModal from '@/components/AILogModal';
-import ComparisonTable from '@/components/ComparisonTable';
 import Header from '@/components/Header';
-import { AppConfig, Provider, QuoteComparisonSummary } from '@/types';
+import { AppConfig, Provider, SortCriteria } from '@/types';
 import { getConfig, saveConfig } from '@/utils/config';
-import { clearLearnings, exportLearningsJSON, getLearnings, importLearnings, syncLearningsFromServer } from '@/services/learnings';
 import { fetchRates, convert } from '@/services/currency';
 
 export default function HomePage() {
@@ -20,70 +19,81 @@ export default function HomePage() {
   const [config, setConfig] = useState<AppConfig>(getConfig());
   const [showConfig, setShowConfig] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
-  const [comparison, setComparison] = useState<QuoteComparisonSummary>();
-  const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
-  const [ratesInfo, setRatesInfo] = useState('');
-  const [viewCurrency, setViewCurrency] = useState('USD');
+  const [sortKey, setSortKey] = useState<SortCriteria>('price-asc');
+  const [rates, setRates] = useState<Record<string, number>>({ USD: 1, ARS: 1200 });
 
   useEffect(() => {
-    syncLearningsFromServer().catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', config.theme === 'dark');
     document.documentElement.setAttribute('data-theme', config.theme);
+    document.documentElement.classList.toggle('dark', config.theme === 'dark');
   }, [config.theme]);
 
-  const refreshRates = async (base = config.exchangeBaseCurrency) => {
-    try {
-      const res = await fetchRates(base);
-      setRates(res.rates);
-      setRatesInfo(`${res.provider} · actualizado ${new Date(res.updatedAt).toLocaleTimeString('es-AR')}`);
-    } catch {
-      setRatesInfo('No se pudieron actualizar tasas');
-    }
-  };
-
   useEffect(() => {
-    refreshRates();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const loadRates = async () => {
+      try {
+        const response = await fetchRates(config.exchangeBaseCurrency);
+        setRates(response.rates);
+      } catch {
+        // noop: conservamos tasas existentes
+      }
+    };
+
+    loadRates();
   }, [config.exchangeBaseCurrency]);
 
   const exchangeRate = rates.ARS || 1200;
 
-  useEffect(() => {
-    if (!providers.length) {
-      setComparison(undefined);
-      return;
-    }
-
-    setComparison({
-      bestPriceProviderId: providers
-        .map((p) => ({ id: p.id, amount: convert(p.totalPrice, p.currency, viewCurrency, rates, config.exchangeBaseCurrency) }))
-        .sort((a, b) => a.amount - b.amount)[0]?.id,
-      normalizedCurrency: viewCurrency,
-      normalizedPrices: Object.fromEntries(
-        providers.map((p) => [p.id, convert(p.totalPrice, p.currency, viewCurrency, rates, config.exchangeBaseCurrency)]),
-      ),
-      rows: buildRows(providers),
-    });
-  }, [providers, rates, viewCurrency, config.exchangeBaseCurrency]);
-
-  const bestPriceId = comparison?.bestPriceProviderId;
-
   const sortedProviders = useMemo(() => {
-    return [...providers].sort((a, b) => {
-      const pa = convert(a.totalPrice, a.currency, viewCurrency, rates, config.exchangeBaseCurrency);
-      const pb = convert(b.totalPrice, b.currency, viewCurrency, rates, config.exchangeBaseCurrency);
-      return pa - pb;
-    });
-  }, [providers, rates, viewCurrency, config.exchangeBaseCurrency]);
+    const toARS = (provider: Provider) =>
+      convert(provider.totalPrice, provider.currency, 'ARS', rates, config.exchangeBaseCurrency);
+
+    const byCoverage = (provider: Provider) => {
+      const covered = provider.coverage.filter((item) => item.status === 'covered' || item.status === 'supplemented').length;
+      return provider.coverage.length ? covered / provider.coverage.length : 0;
+    };
+
+    const sorted = [...providers];
+
+    switch (sortKey) {
+      case 'price-asc':
+        return sorted.sort((a, b) => toARS(a) - toARS(b));
+      case 'price-desc':
+        return sorted.sort((a, b) => toARS(b) - toARS(a));
+      case 'coverage':
+        return sorted.sort((a, b) => byCoverage(b) - byCoverage(a));
+      case 'quality':
+        return sorted.sort((a, b) => (b.qualityScore || 0) - (a.qualityScore || 0));
+      case 'date':
+      default:
+        return sorted;
+    }
+  }, [providers, sortKey, rates, config.exchangeBaseCurrency]);
+
+  const bestPriceId = useMemo(() => {
+    return [...providers]
+      .map((provider) => ({
+        id: provider.id,
+        price: convert(provider.totalPrice, provider.currency, 'ARS', rates, config.exchangeBaseCurrency),
+      }))
+      .sort((a, b) => a.price - b.price)[0]?.id;
+  }, [providers, rates, config.exchangeBaseCurrency]);
 
   const handleThemeToggle = () => {
     const next: AppConfig = { ...config, theme: config.theme === 'dark' ? 'light' : 'dark' };
     setConfig(next);
     saveConfig(next);
   };
+
+  const handleResetAll = () => {
+    if (!window.confirm('¿Resetear tarjetas y contexto del pedido?')) return;
+    setProviders([]);
+    setMaterials('');
+  };
+
+  const today = new Date().toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
@@ -96,26 +106,23 @@ export default function HomePage() {
         onOpenAILog={() => setShowLogs(true)}
       />
 
+      <div className="print-header-bar">
+        <h1>⚖ COMPARUM — Comparativa de Proveedores</h1>
+        <p>
+          Cliente: <strong>Marcelo Escudero</strong> &nbsp;|&nbsp; {providers.length} proveedores &nbsp;|&nbsp; Generado: {today}
+        </p>
+      </div>
+
       <main className="main-container">
-        <UploadSection
-          materials={materials}
-          onMaterialsChange={setMaterials}
-          onProviderExtracted={(provider) => setProviders((prev) => [provider, ...prev])}
+        <UploadSection materials={materials} onMaterialsChange={setMaterials} onProviderExtracted={(provider) => setProviders((prev) => [provider, ...prev])} />
+
+        <SortToolbar
+          sortKey={sortKey}
+          onSortChange={setSortKey}
+          onPrintAll={() => window.print()}
+          onClearProviders={() => setProviders([])}
+          onResetAll={handleResetAll}
         />
-
-        <section className="sort-toolbar no-print">
-          <div className="sort-group">
-            <button className="sort-btn" onClick={() => refreshRates()}>Actualizar tasas</button>
-            <select className="sort-btn" value={viewCurrency} onChange={(e) => setViewCurrency(e.target.value)}>
-              {Object.keys(rates).slice(0, 20).map((currency) => <option key={currency} value={currency}>{currency}</option>)}
-            </select>
-          </div>
-          <div className="toolbar-right">
-            <span className="text-xs text-[var(--text-muted)]">{ratesInfo}</span>
-          </div>
-        </section>
-
-        <ComparisonTable providers={sortedProviders} comparison={comparison} currency={viewCurrency} />
 
         {sortedProviders.length > 0 ? (
           <section className="providers-grid">
@@ -126,7 +133,7 @@ export default function HomePage() {
                 exchangeRate={exchangeRate}
                 isBestPrice={provider.id === bestPriceId}
                 onEdit={setEditing}
-                onRemove={(id) => setProviders((prev) => prev.filter((p) => p.id !== id))}
+                onRemove={(id) => setProviders((prev) => prev.filter((item) => item.id !== id))}
               />
             ))}
           </section>
@@ -138,37 +145,8 @@ export default function HomePage() {
           </section>
         )}
 
-        <section className="ai-config-section no-print">
-          <h4 className="ai-config-h">Sistema de aprendizaje</h4>
-          <p className="ai-config-help">Reglas aprendidas: {getLearnings().length}</p>
-          <div className="ai-config-actions">
-            <button className="btn btn-ghost" onClick={() => {
-              const blob = new Blob([exportLearningsJSON()], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `comparum-learnings-${Date.now()}.json`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }}>Exportar reglas</button>
-            <button className="btn btn-ghost" onClick={() => {
-              const input = document.createElement('input');
-              input.type = 'file';
-              input.accept = '.json';
-              input.onchange = async (event) => {
-                const file = (event.target as HTMLInputElement).files?.[0];
-                if (!file) return;
-                importLearnings(await file.text());
-                await syncLearningsFromServer();
-              };
-              input.click();
-            }}>Importar reglas</button>
-            <button className="btn btn-ghost" onClick={() => clearLearnings()}>Limpiar reglas</button>
-          </div>
-        </section>
-
         <footer className="print-footer-bar" style={{ display: 'block' }}>
-          COMPARUM - Marcelo Escudero · Multi-provider IA (Abacus + Groq + Gemini)
+          COMPARUM — Generado: {today} | Tipo de cambio: 1 USD = {new Intl.NumberFormat('es-AR').format(exchangeRate)} ARS
         </footer>
       </main>
 
@@ -177,7 +155,7 @@ export default function HomePage() {
           provider={editing}
           isOpen={!!editing}
           onClose={() => setEditing(null)}
-          onSave={(updated) => setProviders((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))}
+          onSave={(updated) => setProviders((prev) => prev.map((provider) => (provider.id === updated.id ? updated : provider)))}
         />
       )}
 
@@ -185,22 +163,4 @@ export default function HomePage() {
       <AILogModal isOpen={showLogs} onClose={() => setShowLogs(false)} />
     </div>
   );
-}
-
-function buildRows(providers: Provider[]) {
-  const coverageNames = new Set<string>();
-  providers.forEach((p) => p.coverage.forEach((c) => coverageNames.add(c.name)));
-
-  return Array.from(coverageNames).map((coverageName) => {
-    const cells = providers.map((provider) => {
-      const item = provider.coverage.find((c) => c.name === coverageName);
-      return {
-        providerId: provider.id,
-        status: item?.status || 'unknown',
-      };
-    });
-
-    const bestProviderId = cells.find((c) => c.status === 'covered')?.providerId;
-    return { coverageName, providers: cells, bestProviderId };
-  });
 }
