@@ -92,7 +92,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg)]/90 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-2">
           <div>
-            <h1 className="text-xl font-bold">Comparum v2</h1>
+            <h1 className="text-xl font-bold">COMPARUM - Marcelo Escudero</h1>
             <p className="text-xs text-[var(--muted)]">Extracción + comparación inteligente de cotizaciones</p>
           </div>
 

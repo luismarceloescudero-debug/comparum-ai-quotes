@@ -1,5 +1,5 @@
 // ============================================================
-// Comparum v2 — Shared Type Definitions
+// COMPARUM - Marcelo Escudero — Shared Type Definitions
 // ============================================================
 
 export type AIProviderType = 'abacus' | 'groq' | 'gemini';

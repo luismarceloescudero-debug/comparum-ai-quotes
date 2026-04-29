@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Comparum v2 — extracción y comparación de cotizaciones',
+  title: 'COMPARUM - Marcelo Escudero',
   description: 'Aplicación escalable de extracción de cotizaciones con multi-proveedor IA, comparación y conversión de divisas en tiempo real.',
 };
 
